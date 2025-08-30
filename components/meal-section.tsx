@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FoodModal from "@/components/food-modal";
+import { Search, Plus } from "lucide-react";
 
 type Props = {
   meal: MealKey;
@@ -101,7 +102,12 @@ export function MealSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
+        {/* Search with icon */}
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             placeholder="Search food"
             value={q}
@@ -112,7 +118,7 @@ export function MealSection({
                 ensureAndOpen(q.trim());
               }
             }}
-            className="h-10"
+            className="h-10 pl-9"
             aria-label="Search food"
           />
         </div>
@@ -120,7 +126,7 @@ export function MealSection({
         {q && (
           <div className="flex flex-col gap-2">
             {hasResults ? (
-              <ul className="divide-y rounded-lg border">
+              <ul className="divide-y rounded-xl border">
                 {items.slice(0, 10).map((f) => (
                   <li
                     key={f.id}
@@ -138,11 +144,12 @@ export function MealSection({
                     </div>
                     <Button
                       size="sm"
-                      variant="secondary"
+                      variant="default"
                       onClick={() => ensureAndOpen(f.name)}
                       className="shrink-0"
                       aria-label={`Add ${f.name}`}
                     >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
                       Add
                     </Button>
                   </li>
@@ -151,7 +158,7 @@ export function MealSection({
             ) : (
               <button
                 type="button"
-                className="flex items-center justify-between rounded-lg border p-3 text-left hover:bg-muted/50"
+                className="flex items-center justify-between rounded-xl border p-3 text-left hover:bg-muted/50"
                 onClick={() => ensureAndOpen(q.trim())}
                 aria-label={`Use ${q}`}
               >
@@ -167,29 +174,44 @@ export function MealSection({
           </div>
         )}
 
-        {entries.length > 0 && (
+        {entries.length > 0 ? (
           <ul className="mt-1 space-y-2">
             {entries.map((e) => (
               <li
                 key={e.id}
                 className="flex items-center justify-between rounded-xl border p-3"
               >
-                <div>
-                  <div className="text-sm font-medium">{e.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {e.grams}g • {e.calories} kcal
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{e.name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {e.grams}g • {e.calories} kcal
+                    </span>
                     {(e.protein || e.carbs || e.fat) && (
-                      <>
-                        {" "}
-                        • P:{e.protein ?? 0}g C:{e.carbs ?? 0}g F:{e.fat ?? 0}g
-                      </>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {typeof e.protein === "number" && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                            P {e.protein}g
+                          </span>
+                        )}
+                        {typeof e.carbs === "number" && (
+                          <span className="rounded-full bg-accent/10 px-2 py-0.5 text-accent">
+                            C {e.carbs}g
+                          </span>
+                        )}
+                        {typeof e.fat === "number" && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                            F {e.fat}g
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                  className="text-accent hover:bg-accent/10"
                   onClick={() => {
                     const event = new CustomEvent("remove-entry", {
                       detail: e.id,
@@ -202,6 +224,10 @@ export function MealSection({
               </li>
             ))}
           </ul>
+        ) : (
+          <div className="rounded-xl border p-3 text-center text-sm text-muted-foreground">
+            No items yet. Search above to add your first one.
+          </div>
         )}
       </CardContent>
 

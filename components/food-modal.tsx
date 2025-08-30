@@ -12,7 +12,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Food } from "@/types";
+import { Switch } from "@/components/ui/switch";
+import type { Food } from "@/types";
 
 type Props = {
   open: boolean;
@@ -72,7 +73,7 @@ export default function FoodModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle>Add Food</DialogTitle>
           <DialogDescription>
@@ -119,12 +120,11 @@ export default function FoodModal({
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="manual">Adjust calories manually</Label>
-              <input
+              <Switch
                 id="manual"
-                type="checkbox"
-                className="h-4 w-4"
                 checked={manual}
-                onChange={(e) => setManual(e.target.checked)}
+                onCheckedChange={setManual}
+                aria-label="Adjust calories manually"
               />
             </div>
             <Input
@@ -148,7 +148,8 @@ export default function FoodModal({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-primary text-primary-foreground hover:opacity-90"
+            variant="default"
+            className="hover:opacity-90"
           >
             Add
           </Button>
