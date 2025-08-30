@@ -1,34 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 
-const DEMO_FOODS = [
-  { id: "demo-1", name: "Chole", caloriesPer100g: 180, defaultServingG: 150 },
-  {
-    id: "demo-2",
-    name: "Chole Chawal",
-    caloriesPer100g: 165,
-    defaultServingG: 300,
-  },
-  {
-    id: "demo-3",
-    name: "Chole Bhature",
-    caloriesPer100g: 280,
-    defaultServingG: 250,
-  },
-  {
-    id: "demo-4",
-    name: "Grilled Chicken",
-    caloriesPer100g: 165,
-    defaultServingG: 120,
-  },
-  {
-    id: "demo-5",
-    name: "Paneer Tikka",
-    caloriesPer100g: 240,
-    defaultServingG: 120,
-  },
-];
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").trim();
@@ -65,11 +37,5 @@ export async function GET(req: Request) {
   }
 
   // Demo fallback
-  const items =
-    q.length === 0
-      ? []
-      : DEMO_FOODS.filter((f) =>
-          f.name.toLowerCase().includes(q.toLowerCase())
-        ).slice(0, 20);
-  return NextResponse.json({ items });
+  return NextResponse.json({ items: [] });
 }
