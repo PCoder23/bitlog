@@ -28,6 +28,11 @@ function toCamel(r: DbFood) {
     name: r.name,
     caloriesPer100g:
       r.calories_per_100g != null ? Number(r.calories_per_100g) : undefined,
+    proteinPer100g:
+      r.protein_per_100g != null ? Number(r.protein_per_100g) : undefined,
+    carbsPer100g:
+      r.carbs_per_100g != null ? Number(r.carbs_per_100g) : undefined,
+    fatPer100g: r.fat_per_100g != null ? Number(r.fat_per_100g) : undefined,
     defaultServingG:
       r.default_serving_g != null ? Number(r.default_serving_g) : undefined,
   };

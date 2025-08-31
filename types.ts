@@ -1,11 +1,12 @@
+// in @/types
 export type Food = {
   id: string;
   name: string;
-  caloriesPer100g?: number | null;
-  defaultServingG?: number | null;
-  proteinPer100g?: number | null;
-  carbsPer100g?: number | null;
-  fatPer100g?: number | null;
+  caloriesPer100g?: number;
+  proteinPer100g?: number;
+  carbsPer100g?: number;
+  fatPer100g?: number;
+  defaultServingG?: number;
 };
 
 export type MealKey = "morning" | "lunch" | "evening" | "dinner";

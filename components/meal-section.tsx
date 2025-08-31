@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import type { Entry, Food, MealKey } from "@/types";
 import { v4 as uuidv4 } from "uuid";
@@ -18,28 +18,39 @@ type Props = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function MealSection({
-  meal,
-  onAdd,
-  entries,
-}: {
-  meal: MealKey;
-  onAdd: (e: Entry) => void;
-  entries: Entry[];
-}) {
+export function MealSection({ meal, onAdd, entries }: Props) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<Food | undefined>(undefined);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const { data } = useSWR(
-    q.trim().length > 0
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (
+        showDropdown &&
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [showDropdown]);
+
+  // SWR key: if dropdown is open and q empty => fetch all; if q typed => search; else null
+  const swrKey = showDropdown
+    ? q.trim().length > 0
       ? `/api/foods/search?q=${encodeURIComponent(q.trim())}`
-      : null,
-    fetcher
-  );
-  const items: Food[] = data?.items ?? [];
+      : `/api/foods/search?all=1`
+    : null;
 
+  const { data } = useSWR(swrKey, fetcher);
+  const items: Food[] = data?.items ?? [];
   const hasResults = items.length > 0;
+
   const sectionTitle = useMemo(() => {
     switch (meal) {
       case "morning":
@@ -60,9 +71,12 @@ export function MealSection({
       body: JSON.stringify({ name }),
     });
     const data = await res.json();
-    const f: Food = data.food;
-    setSelectedFood(f);
-    setOpen(true);
+    const f: Food | undefined = data.food;
+    if (f) {
+      setSelectedFood(f);
+      setOpen(true);
+      setShowDropdown(false);
+    }
   }
 
   function handleConfirm({
@@ -75,11 +89,26 @@ export function MealSection({
   }: {
     food: Food;
     grams: number;
-    calories: number;
+    calories?: number;
     protein?: number;
     carbs?: number;
     fat?: number;
   }) {
+    // Fallback compute if modal didn’t return macros/calories
+    const calc = (per100?: number) =>
+      typeof per100 === "number"
+        ? +(per100 * (grams / 100)).toFixed(1)
+        : undefined;
+
+    const finalCalories =
+      typeof calories === "number" ? calories : calc(food.caloriesPer100g);
+
+    const finalProtein =
+      typeof protein === "number" ? protein : calc(food.proteinPer100g);
+    const finalCarbs =
+      typeof carbs === "number" ? carbs : calc(food.carbsPer100g);
+    const finalFat = typeof fat === "number" ? fat : calc(food.fatPer100g);
+
     onAdd({
       id: uuidv4(),
       dateKey: new Date().toISOString().slice(0, 10),
@@ -87,10 +116,10 @@ export function MealSection({
       foodId: food.id,
       name: food.name,
       grams,
-      calories,
-      protein,
-      carbs,
-      fat,
+      calories: finalCalories ?? 0,
+      protein: finalProtein,
+      carbs: finalCarbs,
+      fat: finalFat,
     });
   }
 
@@ -101,7 +130,8 @@ export function MealSection({
           {sectionTitle}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+
+      <CardContent className="flex flex-col gap-3" ref={wrapperRef}>
         {/* Search with icon */}
         <div className="relative">
           <Search
@@ -111,9 +141,13 @@ export function MealSection({
           <Input
             placeholder="Search food"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onFocus={() => setShowDropdown(true)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              if (!showDropdown) setShowDropdown(true);
+            }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && q.trim().length > 0) {
+              if (e.key === "Enter" && (q.trim().length > 0 || selectedFood)) {
                 e.preventDefault();
                 ensureAndOpen(q.trim());
               }
@@ -123,29 +157,44 @@ export function MealSection({
           />
         </div>
 
-        {q && (
+        {/* Results dropdown */}
+        {showDropdown && (
           <div className="flex flex-col gap-2">
             {hasResults ? (
-              <ul className="divide-y rounded-xl border">
-                {items.slice(0, 10).map((f) => (
+              <ul className="max-h-72 overflow-auto divide-y rounded-xl border">
+                {items.slice(0, 20).map((f) => (
                   <li
                     key={f.id}
-                    className="flex items-center justify-between p-3"
+                    className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
+                    onClick={() => ensureAndOpen(f.name)}
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-medium">
                         {f.name}
                       </div>
-                      {typeof f.caloriesPer100g === "number" && (
-                        <div className="text-xs text-muted-foreground">
-                          {f.caloriesPer100g} kcal / 100g
-                        </div>
-                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {typeof f.caloriesPer100g === "number"
+                          ? `${f.caloriesPer100g} kcal`
+                          : "–"}{" "}
+                        / 100g
+                        {typeof f.proteinPer100g === "number" && (
+                          <> • P {f.proteinPer100g}g</>
+                        )}
+                        {typeof f.carbsPer100g === "number" && (
+                          <> • C {f.carbsPer100g}g</>
+                        )}
+                        {typeof f.fatPer100g === "number" && (
+                          <> • F {f.fatPer100g}g</>
+                        )}
+                      </div>
                     </div>
                     <Button
                       size="sm"
                       variant="default"
-                      onClick={() => ensureAndOpen(f.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        ensureAndOpen(f.name);
+                      }}
                       className="shrink-0"
                       aria-label={`Add ${f.name}`}
                     >
@@ -174,6 +223,7 @@ export function MealSection({
           </div>
         )}
 
+        {/* Existing entries */}
         {entries.length > 0 ? (
           <ul className="mt-1 space-y-2">
             {entries.map((e) => (
@@ -226,7 +276,7 @@ export function MealSection({
           </ul>
         ) : (
           <div className="rounded-xl border p-3 text-center text-sm text-muted-foreground">
-            No items yet. Search above to add your first one.
+            No items yet. Click the input to browse or start typing to search.
           </div>
         )}
       </CardContent>
